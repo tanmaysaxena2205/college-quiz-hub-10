@@ -14,7 +14,151 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      questions: {
+        Row: {
+          correct_option: string
+          created_at: string
+          id: string
+          option_a: string
+          option_b: string
+          option_c: string
+          option_d: string
+          question_text: string
+          subject_id: string
+        }
+        Insert: {
+          correct_option: string
+          created_at?: string
+          id?: string
+          option_a: string
+          option_b: string
+          option_c: string
+          option_d: string
+          question_text: string
+          subject_id: string
+        }
+        Update: {
+          correct_option?: string
+          created_at?: string
+          id?: string
+          option_a?: string
+          option_b?: string
+          option_c?: string
+          option_d?: string
+          question_text?: string
+          subject_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "questions_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "subjects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      quiz_answers: {
+        Row: {
+          attempt_id: string
+          id: string
+          is_correct: boolean
+          question_id: string
+          selected_option: string | null
+        }
+        Insert: {
+          attempt_id: string
+          id?: string
+          is_correct?: boolean
+          question_id: string
+          selected_option?: string | null
+        }
+        Update: {
+          attempt_id?: string
+          id?: string
+          is_correct?: boolean
+          question_id?: string
+          selected_option?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quiz_answers_attempt_id_fkey"
+            columns: ["attempt_id"]
+            isOneToOne: false
+            referencedRelation: "quiz_attempts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quiz_answers_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "questions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      quiz_attempts: {
+        Row: {
+          completed_at: string
+          id: string
+          score: number
+          subject_id: string
+          time_taken_seconds: number | null
+          total_questions: number
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string
+          id?: string
+          score?: number
+          subject_id: string
+          time_taken_seconds?: number | null
+          total_questions?: number
+          user_id: string
+        }
+        Update: {
+          completed_at?: string
+          id?: string
+          score?: number
+          subject_id?: string
+          time_taken_seconds?: number | null
+          total_questions?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quiz_attempts_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "subjects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      subjects: {
+        Row: {
+          created_at: string
+          description: string | null
+          icon: string | null
+          id: string
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          icon?: string | null
+          id?: string
+          name: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          icon?: string | null
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
