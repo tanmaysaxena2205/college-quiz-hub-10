@@ -27,9 +27,8 @@ const Auth = () => {
 
     if (error) {
       toast.error(error.message);
-    } else if (!isLogin) {
-      toast.success("Account created! Check your email to verify.");
     } else {
+      if (!isLogin) toast.success("Account created successfully!");
       navigate("/dashboard");
     }
   };
