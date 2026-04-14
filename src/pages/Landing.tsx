@@ -7,6 +7,13 @@ const Landing = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
 
+  // --- ADD THIS FUNCTION ---
+  const handleGuestPlay = () => {
+    localStorage.setItem('isGuest', 'true');
+    navigate('/dashboard');
+  };
+  // -------------------------
+
   return (
     <div className="min-h-screen bg-background bg-grid relative overflow-hidden">
       {/* Floating particles */}
@@ -39,7 +46,11 @@ const Landing = () => {
             </span>
           </div>
           <div className="flex items-center gap-6">
-            <button onClick={() => navigate(user ? "/dashboard" : "/auth")} className="text-sm text-muted-foreground hover:text-foreground transition-colors hidden sm:block">
+            {/* UPDATED: Also allow guest play from the top link if desired */}
+            <button 
+              onClick={() => user ? navigate("/dashboard") : handleGuestPlay()} 
+              className="text-sm text-muted-foreground hover:text-foreground transition-colors hidden sm:block"
+            >
               ⚡ Play Quiz
             </button>
             <Button
@@ -78,11 +89,13 @@ const Landing = () => {
             <Zap className="w-5 h-5 mr-2" />
             Start Your Journey
           </Button>
+          
+          {/* UPDATED: Changed onClick to handleGuestPlay */}
           <Button
             variant="outline"
             size="lg"
             className="h-14 px-8 text-base rounded-full"
-            onClick={() => navigate("/auth")}
+            onClick={handleGuestPlay}
           >
             Play as Guest
           </Button>
