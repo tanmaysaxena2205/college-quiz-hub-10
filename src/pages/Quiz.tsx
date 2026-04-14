@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -19,33 +19,53 @@ interface Question {
   correct_option: string;
 }
 
-const QUIZ_TIME_SECONDS = 300;
-
 const Quiz = () => {
   const { subjectId } = useParams<{ subjectId: string }>();
   const { user } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  const isAI = subjectId === "ai";
+  const stateData = location.state as {
+    questions?: Question[];
+    topic?: string;
+    totalTime?: number;
+  } | null;
 
   const [questions, setQuestions] = useState<Question[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
-  const [timeLeft, setTimeLeft] = useState(QUIZ_TIME_SECONDS);
+  const [timeLeft, setTimeLeft] = useState(0);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [subjectName, setSubjectName] = useState("");
+  const [totalTime, setTotalTime] = useState(300);
 
   useEffect(() => {
-    const fetchQuestions = async () => {
-      const [{ data: questionsData }, { data: subjectData }] = await Promise.all([
-        supabase.from("questions").select("*").eq("subject_id", subjectId!),
-        supabase.from("subjects").select("name").eq("id", subjectId!).single(),
-      ]);
-      if (questionsData) setQuestions(questionsData);
-      if (subjectData) setSubjectName(subjectData.name);
+    if (isAI && stateData?.questions) {
+      setQuestions(stateData.questions);
+      setSubjectName(stateData.topic || "AI Quiz");
+      const t = stateData.totalTime || 300;
+      setTotalTime(t);
+      setTimeLeft(t);
       setLoading(false);
-    };
-    fetchQuestions();
-  }, [subjectId]);
+    } else if (!isAI && subjectId) {
+      const fetchQuestions = async () => {
+        const [{ data: questionsData }, { data: subjectData }] = await Promise.all([
+          supabase.from("questions").select("*").eq("subject_id", subjectId),
+          supabase.from("subjects").select("name").eq("id", subjectId).single(),
+        ]);
+        if (questionsData) setQuestions(questionsData);
+        if (subjectData) setSubjectName(subjectData.name);
+        setTotalTime(300);
+        setTimeLeft(300);
+        setLoading(false);
+      };
+      fetchQuestions();
+    } else {
+      navigate("/dashboard");
+    }
+  }, [subjectId, isAI, stateData, navigate]);
 
   const submitQuiz = useCallback(async () => {
     if (submitting || !user) return;
@@ -56,36 +76,50 @@ const Quiz = () => {
       if (answers[q.id] === q.correct_option) score++;
     });
 
-    const timeTaken = QUIZ_TIME_SECONDS - timeLeft;
+    const timeTaken = totalTime - timeLeft;
 
-    const { data: attempt, error } = await supabase
-      .from("quiz_attempts")
-      .insert({
-        user_id: user.id,
-        subject_id: subjectId!,
-        score,
-        total_questions: questions.length,
-        time_taken_seconds: timeTaken,
-      })
-      .select()
-      .single();
+    if (isAI) {
+      // For AI quizzes, navigate to results with state (no DB save for AI-generated)
+      navigate("/results/ai", {
+        state: {
+          score,
+          total_questions: questions.length,
+          time_taken_seconds: timeTaken,
+          topic: subjectName,
+          questions,
+          answers,
+        },
+      });
+    } else {
+      const { data: attempt, error } = await supabase
+        .from("quiz_attempts")
+        .insert({
+          user_id: user.id,
+          subject_id: subjectId!,
+          score,
+          total_questions: questions.length,
+          time_taken_seconds: timeTaken,
+        })
+        .select()
+        .single();
 
-    if (error || !attempt) {
-      toast.error("Failed to submit quiz");
-      setSubmitting(false);
-      return;
+      if (error || !attempt) {
+        toast.error("Failed to submit quiz");
+        setSubmitting(false);
+        return;
+      }
+
+      const answerRows = questions.map((q) => ({
+        attempt_id: attempt.id,
+        question_id: q.id,
+        selected_option: answers[q.id] || null,
+        is_correct: answers[q.id] === q.correct_option,
+      }));
+
+      await supabase.from("quiz_answers").insert(answerRows);
+      navigate(`/results/${attempt.id}`);
     }
-
-    const answerRows = questions.map((q) => ({
-      attempt_id: attempt.id,
-      question_id: q.id,
-      selected_option: answers[q.id] || null,
-      is_correct: answers[q.id] === q.correct_option,
-    }));
-
-    await supabase.from("quiz_answers").insert(answerRows);
-    navigate(`/results/${attempt.id}`);
-  }, [submitting, user, questions, answers, timeLeft, subjectId, navigate]);
+  }, [submitting, user, questions, answers, timeLeft, totalTime, subjectId, isAI, subjectName, navigate]);
 
   useEffect(() => {
     if (loading || questions.length === 0) return;
@@ -116,7 +150,6 @@ const Quiz = () => {
         <Card className="max-w-md w-full mx-4 bg-card/80 border-border/50">
           <CardContent className="p-8 text-center space-y-4">
             <p className="text-lg font-display font-semibold text-foreground">No questions available</p>
-            <p className="text-muted-foreground">This subject doesn't have any questions yet.</p>
             <Button onClick={() => navigate("/dashboard")}>Back to Dashboard</Button>
           </CardContent>
         </Card>

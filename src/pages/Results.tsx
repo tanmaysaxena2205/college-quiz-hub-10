@@ -1,10 +1,20 @@
 import { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { CheckCircle2, XCircle, ArrowLeft, RotateCcw, Zap } from "lucide-react";
 import { cn } from "@/lib/utils";
+
+interface Question {
+  id: string;
+  question_text: string;
+  option_a: string;
+  option_b: string;
+  option_c: string;
+  option_d: string;
+  correct_option: string;
+}
 
 interface AttemptDetail {
   score: number;
@@ -27,33 +37,60 @@ interface AnswerDetail {
   } | null;
 }
 
+interface AIResultState {
+  score: number;
+  total_questions: number;
+  time_taken_seconds: number;
+  topic: string;
+  questions: Question[];
+  answers: Record<string, string>;
+}
+
 const Results = () => {
   const { attemptId } = useParams<{ attemptId: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  const isAI = attemptId === "ai";
+  const aiState = location.state as AIResultState | null;
+
   const [attempt, setAttempt] = useState<AttemptDetail | null>(null);
-  const [answers, setAnswers] = useState<AnswerDetail[]>([]);
+  const [dbAnswers, setDbAnswers] = useState<AnswerDetail[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchResults = async () => {
-      const [{ data: attemptData }, { data: answersData }] = await Promise.all([
-        supabase
-          .from("quiz_attempts")
-          .select("score, total_questions, time_taken_seconds, subject_id, subjects(name)")
-          .eq("id", attemptId!)
-          .single(),
-        supabase
-          .from("quiz_answers")
-          .select("selected_option, is_correct, questions(question_text, option_a, option_b, option_c, option_d, correct_option)")
-          .eq("attempt_id", attemptId!),
-      ]);
-
-      if (attemptData) setAttempt(attemptData as unknown as AttemptDetail);
-      if (answersData) setAnswers(answersData as unknown as AnswerDetail[]);
+    if (isAI && aiState) {
+      setAttempt({
+        score: aiState.score,
+        total_questions: aiState.total_questions,
+        time_taken_seconds: aiState.time_taken_seconds,
+        subject_id: "",
+        subjects: { name: aiState.topic },
+      });
       setLoading(false);
-    };
-    fetchResults();
-  }, [attemptId]);
+    } else if (!isAI) {
+      const fetchResults = async () => {
+        const [{ data: attemptData }, { data: answersData }] = await Promise.all([
+          supabase
+            .from("quiz_attempts")
+            .select("score, total_questions, time_taken_seconds, subject_id, subjects(name)")
+            .eq("id", attemptId!)
+            .single(),
+          supabase
+            .from("quiz_answers")
+            .select("selected_option, is_correct, questions(question_text, option_a, option_b, option_c, option_d, correct_option)")
+            .eq("attempt_id", attemptId!),
+        ]);
+
+        if (attemptData) setAttempt(attemptData as unknown as AttemptDetail);
+        if (answersData) setDbAnswers(answersData as unknown as AnswerDetail[]);
+        setLoading(false);
+      };
+      fetchResults();
+    } else {
+      navigate("/dashboard");
+    }
+  }, [attemptId, isAI, aiState, navigate]);
 
   if (loading) {
     return (
@@ -75,22 +112,36 @@ const Results = () => {
   const minutes = attempt.time_taken_seconds ? Math.floor(attempt.time_taken_seconds / 60) : 0;
   const seconds = attempt.time_taken_seconds ? attempt.time_taken_seconds % 60 : 0;
 
-  const getOptionText = (q: AnswerDetail["questions"], key: string) => {
-    if (!q) return "";
+  const getOptionText = (q: { option_a: string; option_b: string; option_c: string; option_d: string }, key: string) => {
     const map: Record<string, string> = { A: q.option_a, B: q.option_b, C: q.option_c, D: q.option_d };
     return map[key] || "";
   };
 
+  // Build unified answer list
+  const reviewItems = isAI && aiState
+    ? aiState.questions.map((q) => ({
+        question_text: q.question_text,
+        selected_option: aiState.answers[q.id] || null,
+        is_correct: aiState.answers[q.id] === q.correct_option,
+        correct_option: q.correct_option,
+        options: q,
+      }))
+    : dbAnswers.map((a) => ({
+        question_text: a.questions?.question_text || "",
+        selected_option: a.selected_option,
+        is_correct: a.is_correct,
+        correct_option: a.questions?.correct_option || "",
+        options: a.questions || { option_a: "", option_b: "", option_c: "", option_d: "" },
+      }));
+
   return (
     <div className="min-h-screen bg-background bg-grid">
       <header className="border-b border-border/50 bg-card/60 backdrop-blur-sm">
-        <div className="max-w-3xl mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-gradient-primary flex items-center justify-center glow-primary">
-              <Zap className="w-5 h-5 text-primary-foreground" />
-            </div>
-            <span className="font-display font-bold">Results</span>
+        <div className="max-w-3xl mx-auto px-4 py-4 flex items-center gap-2.5">
+          <div className="w-9 h-9 rounded-xl bg-gradient-primary flex items-center justify-center glow-primary">
+            <Zap className="w-5 h-5 text-primary-foreground" />
           </div>
+          <span className="font-display font-bold">Results</span>
         </div>
       </header>
 
@@ -118,27 +169,27 @@ const Results = () => {
 
         <div className="space-y-4">
           <h2 className="font-display font-bold text-lg text-foreground">Review Answers</h2>
-          {answers.map((answer, i) => (
+          {reviewItems.map((item, i) => (
             <Card key={i} className="border-border/50 bg-card/60 backdrop-blur-sm">
               <CardContent className="p-5 space-y-3">
                 <div className="flex items-start gap-3">
-                  {answer.is_correct ? (
+                  {item.is_correct ? (
                     <CheckCircle2 className="w-5 h-5 text-success mt-0.5 shrink-0" />
                   ) : (
                     <XCircle className="w-5 h-5 text-destructive mt-0.5 shrink-0" />
                   )}
-                  <p className="font-medium text-foreground">{answer.questions?.question_text}</p>
+                  <p className="font-medium text-foreground">{item.question_text}</p>
                 </div>
-                {answer.selected_option ? (
-                  <p className={cn("text-sm ml-8", answer.is_correct ? "text-success" : "text-destructive")}>
-                    Your answer: {answer.selected_option} — {getOptionText(answer.questions, answer.selected_option)}
+                {item.selected_option ? (
+                  <p className={cn("text-sm ml-8", item.is_correct ? "text-success" : "text-destructive")}>
+                    Your answer: {item.selected_option} — {getOptionText(item.options, item.selected_option)}
                   </p>
                 ) : (
                   <p className="text-sm text-muted-foreground ml-8">Not answered</p>
                 )}
-                {!answer.is_correct && answer.questions && (
+                {!item.is_correct && (
                   <p className="text-sm text-success ml-8">
-                    Correct: {answer.questions.correct_option} — {getOptionText(answer.questions, answer.questions.correct_option)}
+                    Correct: {item.correct_option} — {getOptionText(item.options, item.correct_option)}
                   </p>
                 )}
               </CardContent>
@@ -150,11 +201,9 @@ const Results = () => {
           <Button variant="outline" onClick={() => navigate("/dashboard")}>
             <ArrowLeft className="w-4 h-4 mr-2" /> Dashboard
           </Button>
-          {attempt.subject_id && (
-            <Button onClick={() => navigate(`/quiz/${attempt.subject_id}`)}>
-              <RotateCcw className="w-4 h-4 mr-2" /> Retry Quiz
-            </Button>
-          )}
+          <Button onClick={() => navigate("/dashboard")}>
+            <RotateCcw className="w-4 h-4 mr-2" /> New Quiz
+          </Button>
         </div>
       </main>
     </div>
