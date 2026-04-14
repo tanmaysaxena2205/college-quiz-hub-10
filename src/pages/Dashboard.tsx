@@ -72,9 +72,18 @@ const Dashboard = () => {
               Home
             </Button>
             <span className="text-sm text-muted-foreground hidden sm:block">{user?.email}</span>
-            <Button variant="ghost" size="sm" onClick={signOut} className="text-muted-foreground hover:text-foreground">
-              <LogOut className="w-4 h-4 mr-2" /> Sign Out
-            </Button>
+            <Button 
+  variant="ghost" 
+  size="sm" 
+  onClick={async () => {
+    await signOut(); // This clears the Supabase session
+    localStorage.removeItem('isGuest'); // Clean up the guest flag we added earlier
+    navigate("/"); // Redirect to your Landing page
+  }} 
+  className="text-muted-foreground hover:text-foreground"
+>
+  <LogOut className="w-4 h-4 mr-2" /> Sign Out
+</Button>
           </div>
         </div>
       </nav>
