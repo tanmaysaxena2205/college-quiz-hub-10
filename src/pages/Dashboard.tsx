@@ -68,6 +68,9 @@ const Dashboard = () => {
             </span>
           </div>
           <div className="flex items-center gap-4">
+            <Button variant="ghost" size="sm" onClick={() => navigate("/")} className="text-muted-foreground hover:text-foreground">
+              Home
+            </Button>
             <span className="text-sm text-muted-foreground hidden sm:block">{user?.email}</span>
             <Button variant="ghost" size="sm" onClick={signOut} className="text-muted-foreground hover:text-foreground">
               <LogOut className="w-4 h-4 mr-2" /> Sign Out
