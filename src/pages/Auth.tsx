@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { toast } from "sonner";
+import { Zap } from "lucide-react";
 
 const Auth = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -34,17 +35,20 @@ const Auth = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background px-4">
+    <div className="min-h-screen flex items-center justify-center bg-background bg-grid px-4">
       <div className="w-full max-w-md space-y-8">
         <div className="text-center space-y-2">
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-primary text-primary-foreground font-display text-2xl font-bold mb-4">
-            Q
+          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-primary glow-primary mb-4">
+            <Zap className="w-7 h-7 text-primary-foreground" />
           </div>
-          <h1 className="text-3xl font-display font-bold text-foreground">QuizHub</h1>
+          <h1 className="text-3xl font-display font-bold">
+            <span className="text-foreground">QUIZ</span>
+            <span className="text-gradient-primary">MASTERMIND</span>
+          </h1>
           <p className="text-muted-foreground">Your college MCQ platform</p>
         </div>
 
-        <Card className="border-border/50 shadow-lg">
+        <Card className="border-border/50 bg-card/80 backdrop-blur-sm">
           <CardHeader className="space-y-1 pb-4">
             <CardTitle className="text-xl font-display">{isLogin ? "Welcome back" : "Create account"}</CardTitle>
             <CardDescription>
@@ -60,7 +64,7 @@ const Auth = () => {
                   placeholder="you@college.edu"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="h-11"
+                  className="h-11 bg-secondary/50 border-border"
                 />
               </div>
               <div className="space-y-2">
@@ -70,10 +74,10 @@ const Auth = () => {
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="h-11"
+                  className="h-11 bg-secondary/50 border-border"
                 />
               </div>
-              <Button type="submit" className="w-full h-11 font-semibold" disabled={loading}>
+              <Button type="submit" className="w-full h-11 font-semibold rounded-xl" disabled={loading}>
                 {loading ? "Please wait..." : isLogin ? "Sign In" : "Sign Up"}
               </Button>
             </form>

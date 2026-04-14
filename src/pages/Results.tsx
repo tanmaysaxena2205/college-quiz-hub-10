@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { CheckCircle2, XCircle, ArrowLeft, RotateCcw } from "lucide-react";
+import { CheckCircle2, XCircle, ArrowLeft, RotateCcw, Zap } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface AttemptDetail {
@@ -57,7 +57,7 @@ const Results = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="min-h-screen flex items-center justify-center bg-background bg-grid">
         <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
       </div>
     );
@@ -65,7 +65,7 @@ const Results = () => {
 
   if (!attempt) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="min-h-screen flex items-center justify-center bg-background bg-grid">
         <p className="text-muted-foreground">Results not found.</p>
       </div>
     );
@@ -82,26 +82,25 @@ const Results = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="border-b border-border/50 bg-card/80 backdrop-blur-sm">
+    <div className="min-h-screen bg-background bg-grid">
+      <header className="border-b border-border/50 bg-card/60 backdrop-blur-sm">
         <div className="max-w-3xl mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-primary text-primary-foreground font-display text-lg font-bold flex items-center justify-center">
-              Q
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-xl bg-gradient-primary flex items-center justify-center glow-primary">
+              <Zap className="w-5 h-5 text-primary-foreground" />
             </div>
-            <span className="font-display font-bold text-foreground">Results</span>
+            <span className="font-display font-bold">Results</span>
           </div>
         </div>
       </header>
 
       <main className="max-w-3xl mx-auto px-4 py-8 space-y-8">
-        {/* Score card */}
-        <Card className="border-border/50 overflow-hidden">
+        <Card className="border-border/50 bg-card/80 backdrop-blur-sm overflow-hidden">
           <div className={cn(
             "p-8 text-center",
             percentage >= 70 ? "bg-success/10" : percentage >= 40 ? "bg-primary/10" : "bg-destructive/10"
           )}>
-            <p className="text-6xl font-display font-bold text-foreground">{percentage}%</p>
+            <p className="text-6xl font-display font-bold text-gradient-primary glow-text">{percentage}%</p>
             <p className="text-lg text-muted-foreground mt-2">
               {attempt.score} out of {attempt.total_questions} correct
             </p>
@@ -110,18 +109,17 @@ const Results = () => {
             </p>
             <p className={cn(
               "mt-3 font-display font-semibold text-lg",
-              percentage >= 70 ? "text-success" : percentage >= 40 ? "text-primary" : "text-destructive"
+              percentage >= 70 ? "text-success" : percentage >= 40 ? "text-gradient-primary" : "text-destructive"
             )}>
               {percentage >= 70 ? "Excellent! 🎉" : percentage >= 40 ? "Good effort! 👍" : "Keep practicing! 💪"}
             </p>
           </div>
         </Card>
 
-        {/* Answer review */}
         <div className="space-y-4">
           <h2 className="font-display font-bold text-lg text-foreground">Review Answers</h2>
           {answers.map((answer, i) => (
-            <Card key={i} className="border-border/50">
+            <Card key={i} className="border-border/50 bg-card/60 backdrop-blur-sm">
               <CardContent className="p-5 space-y-3">
                 <div className="flex items-start gap-3">
                   {answer.is_correct ? (

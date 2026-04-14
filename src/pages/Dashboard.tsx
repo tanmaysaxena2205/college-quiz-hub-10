@@ -4,7 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { LogOut, BookOpen, Trophy, Clock } from "lucide-react";
+import { LogOut, BookOpen, Trophy, Clock, Zap } from "lucide-react";
 
 interface Subject {
   id: string;
@@ -43,20 +43,19 @@ const Dashboard = () => {
     fetchData();
   }, []);
 
-  const handleStartQuiz = (subjectId: string) => {
-    navigate(`/quiz/${subjectId}`);
-  };
-
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background bg-grid">
       {/* Header */}
-      <header className="border-b border-border/50 bg-card/80 backdrop-blur-sm sticky top-0 z-10">
+      <header className="border-b border-border/50 bg-card/60 backdrop-blur-sm sticky top-0 z-10">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-primary text-primary-foreground font-display text-lg font-bold flex items-center justify-center">
-              Q
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-xl bg-gradient-primary flex items-center justify-center glow-primary">
+              <Zap className="w-5 h-5 text-primary-foreground" />
             </div>
-            <span className="font-display font-bold text-lg text-foreground">QuizHub</span>
+            <span className="font-display font-bold text-lg">
+              <span className="text-foreground">QUIZ</span>
+              <span className="text-gradient-primary">MASTERMIND</span>
+            </span>
           </div>
           <div className="flex items-center gap-4">
             <span className="text-sm text-muted-foreground hidden sm:block">{user?.email}</span>
@@ -70,39 +69,23 @@ const Dashboard = () => {
       <main className="max-w-6xl mx-auto px-4 sm:px-6 py-8 space-y-8">
         {/* Stats */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <Card className="border-border/50">
-            <CardContent className="p-5 flex items-center gap-4">
-              <div className="w-10 h-10 rounded-xl bg-accent flex items-center justify-center">
-                <BookOpen className="w-5 h-5 text-accent-foreground" />
-              </div>
-              <div>
-                <p className="text-2xl font-display font-bold text-foreground">{subjects.length}</p>
-                <p className="text-sm text-muted-foreground">Subjects</p>
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="border-border/50">
-            <CardContent className="p-5 flex items-center gap-4">
-              <div className="w-10 h-10 rounded-xl bg-accent flex items-center justify-center">
-                <Trophy className="w-5 h-5 text-accent-foreground" />
-              </div>
-              <div>
-                <p className="text-2xl font-display font-bold text-foreground">{stats.total_attempts}</p>
-                <p className="text-sm text-muted-foreground">Quizzes Taken</p>
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="border-border/50">
-            <CardContent className="p-5 flex items-center gap-4">
-              <div className="w-10 h-10 rounded-xl bg-accent flex items-center justify-center">
-                <Clock className="w-5 h-5 text-accent-foreground" />
-              </div>
-              <div>
-                <p className="text-2xl font-display font-bold text-foreground">{stats.avg_score}%</p>
-                <p className="text-sm text-muted-foreground">Avg Score</p>
-              </div>
-            </CardContent>
-          </Card>
+          {[
+            { icon: BookOpen, value: subjects.length, label: "Subjects" },
+            { icon: Trophy, value: stats.total_attempts, label: "Quizzes Taken" },
+            { icon: Clock, value: `${stats.avg_score}%`, label: "Avg Score" },
+          ].map((stat) => (
+            <Card key={stat.label} className="border-border/50 bg-card/60 backdrop-blur-sm">
+              <CardContent className="p-5 flex items-center gap-4">
+                <div className="w-10 h-10 rounded-xl bg-accent flex items-center justify-center">
+                  <stat.icon className="w-5 h-5 text-accent-foreground" />
+                </div>
+                <div>
+                  <p className="text-2xl font-display font-bold text-foreground">{stat.value}</p>
+                  <p className="text-sm text-muted-foreground">{stat.label}</p>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
         </div>
 
         {/* Subjects */}
@@ -111,7 +94,7 @@ const Dashboard = () => {
           {loading ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {[1, 2, 3].map((i) => (
-                <Card key={i} className="border-border/50 animate-pulse">
+                <Card key={i} className="border-border/50 bg-card/60 animate-pulse">
                   <CardContent className="p-6 h-36" />
                 </Card>
               ))}
@@ -121,13 +104,13 @@ const Dashboard = () => {
               {subjects.map((subject) => (
                 <Card
                   key={subject.id}
-                  className="border-border/50 hover:border-primary/30 hover:shadow-md transition-all cursor-pointer group"
-                  onClick={() => handleStartQuiz(subject.id)}
+                  className="border-border/50 bg-card/60 backdrop-blur-sm hover:border-primary/40 hover:glow-primary transition-all cursor-pointer group"
+                  onClick={() => navigate(`/quiz/${subject.id}`)}
                 >
                   <CardContent className="p-6 space-y-3">
                     <div className="flex items-center justify-between">
                       <span className="text-3xl">{subject.icon}</span>
-                      <Button size="sm" variant="ghost" className="opacity-0 group-hover:opacity-100 transition-opacity text-primary">
+                      <Button size="sm" variant="ghost" className="opacity-0 group-hover:opacity-100 transition-opacity text-gradient-primary">
                         Start →
                       </Button>
                     </div>
