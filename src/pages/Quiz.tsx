@@ -19,7 +19,7 @@ interface Question {
   correct_option: string;
 }
 
-const QUIZ_TIME_SECONDS = 300; // 5 minutes
+const QUIZ_TIME_SECONDS = 300;
 
 const Quiz = () => {
   const { subjectId } = useParams<{ subjectId: string }>();
@@ -104,7 +104,7 @@ const Quiz = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="min-h-screen flex items-center justify-center bg-background bg-grid">
         <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
       </div>
     );
@@ -112,8 +112,8 @@ const Quiz = () => {
 
   if (questions.length === 0) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <Card className="max-w-md w-full mx-4">
+      <div className="min-h-screen flex items-center justify-center bg-background bg-grid">
+        <Card className="max-w-md w-full mx-4 bg-card/80 border-border/50">
           <CardContent className="p-8 text-center space-y-4">
             <p className="text-lg font-display font-semibold text-foreground">No questions available</p>
             <p className="text-muted-foreground">This subject doesn't have any questions yet.</p>
@@ -136,9 +136,8 @@ const Quiz = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Top bar */}
-      <header className="border-b border-border/50 bg-card/80 backdrop-blur-sm sticky top-0 z-10">
+    <div className="min-h-screen bg-background bg-grid">
+      <header className="border-b border-border/50 bg-card/60 backdrop-blur-sm sticky top-0 z-10">
         <div className="max-w-3xl mx-auto px-4 py-3 flex items-center justify-between">
           <div>
             <p className="font-display font-semibold text-foreground">{subjectName}</p>
@@ -146,7 +145,7 @@ const Quiz = () => {
           </div>
           <div className={cn(
             "flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium",
-            timeLeft < 60 ? "bg-destructive/10 text-destructive" : "bg-accent text-accent-foreground"
+            timeLeft < 60 ? "bg-destructive/20 text-destructive" : "bg-secondary text-foreground"
           )}>
             <Clock className="w-4 h-4" />
             {minutes}:{seconds.toString().padStart(2, "0")}
@@ -158,7 +157,7 @@ const Quiz = () => {
       </header>
 
       <main className="max-w-3xl mx-auto px-4 py-8 space-y-6">
-        <Card className="border-border/50">
+        <Card className="border-border/50 bg-card/80 backdrop-blur-sm">
           <CardContent className="p-6 sm:p-8">
             <p className="text-lg font-medium text-foreground leading-relaxed">{current.question_text}</p>
           </CardContent>
@@ -172,15 +171,15 @@ const Quiz = () => {
               className={cn(
                 "w-full text-left p-4 rounded-xl border-2 transition-all",
                 answers[current.id] === opt.key
-                  ? "border-primary bg-accent text-foreground shadow-sm"
-                  : "border-border/50 bg-card hover:border-primary/30 text-foreground"
+                  ? "border-primary bg-accent glow-primary text-foreground shadow-sm"
+                  : "border-border/50 bg-card/60 hover:border-primary/30 text-foreground"
               )}
             >
               <span className={cn(
                 "inline-flex items-center justify-center w-7 h-7 rounded-lg text-sm font-semibold mr-3",
                 answers[current.id] === opt.key
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-muted text-muted-foreground"
+                  ? "bg-gradient-primary text-primary-foreground"
+                  : "bg-secondary text-muted-foreground"
               )}>
                 {opt.key}
               </span>
@@ -209,7 +208,6 @@ const Quiz = () => {
           )}
         </div>
 
-        {/* Question nav dots */}
         <div className="flex flex-wrap gap-2 justify-center pt-4">
           {questions.map((q, i) => (
             <button
@@ -218,10 +216,10 @@ const Quiz = () => {
               className={cn(
                 "w-8 h-8 rounded-lg text-xs font-medium transition-all",
                 i === currentIndex
-                  ? "bg-primary text-primary-foreground"
+                  ? "bg-gradient-primary text-primary-foreground glow-primary"
                   : answers[q.id]
                   ? "bg-accent text-accent-foreground"
-                  : "bg-muted text-muted-foreground"
+                  : "bg-secondary text-muted-foreground"
               )}
             >
               {i + 1}
