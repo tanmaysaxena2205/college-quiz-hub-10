@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Slider } from "@/components/ui/slider";
-import { Zap, LogOut, Settings2, Sparkles } from "lucide-react";
+import { Zap, LogOut, Settings2, Sparkles, FileText, ListChecks } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -19,6 +19,7 @@ const Dashboard = () => {
   const [numQuestions, setNumQuestions] = useState(5);
   const [timePerQuestion, setTimePerQuestion] = useState(60);
   const [difficulty, setDifficulty] = useState<string>("MEDIUM");
+  const [questionType, setQuestionType] = useState<"objective" | "subjective">("objective");
   const [generating, setGenerating] = useState(false);
 
   const handleGenerate = async () => {
@@ -30,7 +31,7 @@ const Dashboard = () => {
     setGenerating(true);
     try {
       const { data, error } = await supabase.functions.invoke("generate-quiz", {
-        body: { topic: topic.trim(), numQuestions, difficulty: difficulty.toLowerCase() },
+        body: { topic: topic.trim(), numQuestions, difficulty: difficulty.toLowerCase(), questionType },
       });
 
       if (error) throw error;
@@ -43,6 +44,7 @@ const Dashboard = () => {
           topic: topic.trim(),
           timePerQuestion,
           totalTime: timePerQuestion * numQuestions,
+          questionType,
         },
       });
     } catch (err) {
@@ -167,6 +169,42 @@ const Dashboard = () => {
                 </button>
               ))}
             </div>
+          </div>
+
+          {/* Question Type */}
+          <div className="space-y-3">
+            <span className="font-display font-semibold text-foreground text-sm">Question Type</span>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setQuestionType("objective")}
+                className={cn(
+                  "flex items-center gap-2 px-6 py-2.5 rounded-full text-sm font-semibold transition-all",
+                  questionType === "objective"
+                    ? "bg-gradient-primary text-primary-foreground glow-primary"
+                    : "bg-secondary text-muted-foreground hover:text-foreground"
+                )}
+              >
+                <ListChecks className="w-4 h-4" />
+                Objective (MCQ)
+              </button>
+              <button
+                onClick={() => setQuestionType("subjective")}
+                className={cn(
+                  "flex items-center gap-2 px-6 py-2.5 rounded-full text-sm font-semibold transition-all",
+                  questionType === "subjective"
+                    ? "bg-gradient-primary text-primary-foreground glow-primary"
+                    : "bg-secondary text-muted-foreground hover:text-foreground"
+                )}
+              >
+                <FileText className="w-4 h-4" />
+                Subjective
+              </button>
+            </div>
+            {questionType === "subjective" && (
+              <p className="text-xs text-muted-foreground">
+                Coding topics will get code-writing questions with an integrated compiler. Non-coding topics get written-answer questions. All answers are AI-graded.
+              </p>
+            )}
           </div>
         </div>
 
