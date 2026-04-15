@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Slider } from "@/components/ui/slider";
-import { Zap, LogOut, Settings2, Sparkles } from "lucide-react";
+import { Zap, LogOut, Settings2, Sparkles, FileText, ListChecks } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -19,6 +19,7 @@ const Dashboard = () => {
   const [numQuestions, setNumQuestions] = useState(5);
   const [timePerQuestion, setTimePerQuestion] = useState(60);
   const [difficulty, setDifficulty] = useState<string>("MEDIUM");
+  const [questionType, setQuestionType] = useState<"objective" | "subjective">("objective");
   const [generating, setGenerating] = useState(false);
 
   const handleGenerate = async () => {
@@ -30,7 +31,7 @@ const Dashboard = () => {
     setGenerating(true);
     try {
       const { data, error } = await supabase.functions.invoke("generate-quiz", {
-        body: { topic: topic.trim(), numQuestions, difficulty: difficulty.toLowerCase() },
+        body: { topic: topic.trim(), numQuestions, difficulty: difficulty.toLowerCase(), questionType },
       });
 
       if (error) throw error;
