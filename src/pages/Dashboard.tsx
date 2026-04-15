@@ -44,6 +44,7 @@ const Dashboard = () => {
           topic: topic.trim(),
           timePerQuestion,
           totalTime: timePerQuestion * numQuestions,
+          questionType,
         },
       });
     } catch (err) {
