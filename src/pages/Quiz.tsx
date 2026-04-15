@@ -4,20 +4,35 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Textarea } from "@/components/ui/textarea";
 import { Progress } from "@/components/ui/progress";
 import { Clock, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import CodeEditor from "@/components/CodeEditor";
 
-interface Question {
+interface ObjectiveQuestion {
   id: string;
   question_text: string;
+  question_type: "objective";
   option_a: string;
   option_b: string;
   option_c: string;
   option_d: string;
   correct_option: string;
 }
+
+interface SubjectiveQuestion {
+  id: string;
+  question_text: string;
+  question_type: "subjective";
+  is_coding: boolean;
+  model_answer: string;
+  max_marks: number;
+  grading_criteria: string;
+}
+
+type Question = ObjectiveQuestion | SubjectiveQuestion;
 
 const Quiz = () => {
   const { subjectId } = useParams<{ subjectId: string }>();
@@ -30,7 +45,10 @@ const Quiz = () => {
     questions?: Question[];
     topic?: string;
     totalTime?: number;
+    questionType?: "objective" | "subjective";
   } | null;
+
+  const questionType = stateData?.questionType || "objective";
 
   const [questions, setQuestions] = useState<Question[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -55,7 +73,10 @@ const Quiz = () => {
           supabase.from("questions").select("*").eq("subject_id", subjectId),
           supabase.from("subjects").select("name").eq("id", subjectId).single(),
         ]);
-        if (questionsData) setQuestions(questionsData);
+        if (questionsData) {
+          // DB questions are always objective
+          setQuestions(questionsData.map(q => ({ ...q, question_type: "objective" as const })));
+        }
         if (subjectData) setSubjectName(subjectData.name);
         setTotalTime(300);
         setTimeLeft(300);
@@ -68,20 +89,36 @@ const Quiz = () => {
   }, [subjectId, isAI, stateData, navigate]);
 
   const submitQuiz = useCallback(async () => {
-    if (submitting || !user) return;
+    if (submitting) return;
     setSubmitting(true);
-
-    let score = 0;
-    questions.forEach((q) => {
-      if (answers[q.id] === q.correct_option) score++;
-    });
-
+    const isGuest = !user;
     const timeTaken = totalTime - timeLeft;
 
-    if (isAI) {
-      // For AI quizzes, navigate to results with state (no DB save for AI-generated)
+    if (questionType === "subjective") {
+      // Navigate to results with subjective data for AI grading
       navigate("/results/ai", {
         state: {
+          questionType: "subjective",
+          total_questions: questions.length,
+          time_taken_seconds: timeTaken,
+          topic: subjectName,
+          questions,
+          answers,
+        },
+      });
+      return;
+    }
+
+    // Objective scoring
+    let score = 0;
+    questions.forEach((q) => {
+      if (q.question_type === "objective" && answers[q.id] === q.correct_option) score++;
+    });
+
+    if (isAI || isGuest) {
+      navigate("/results/ai", {
+        state: {
+          questionType: "objective",
           score,
           total_questions: questions.length,
           time_taken_seconds: timeTaken,
@@ -94,7 +131,7 @@ const Quiz = () => {
       const { data: attempt, error } = await supabase
         .from("quiz_attempts")
         .insert({
-          user_id: user.id,
+          user_id: user!.id,
           subject_id: subjectId!,
           score,
           total_questions: questions.length,
@@ -113,13 +150,13 @@ const Quiz = () => {
         attempt_id: attempt.id,
         question_id: q.id,
         selected_option: answers[q.id] || null,
-        is_correct: answers[q.id] === q.correct_option,
+        is_correct: q.question_type === "objective" && answers[q.id] === q.correct_option,
       }));
 
       await supabase.from("quiz_answers").insert(answerRows);
       navigate(`/results/${attempt.id}`);
     }
-  }, [submitting, user, questions, answers, timeLeft, totalTime, subjectId, isAI, subjectName, navigate]);
+  }, [submitting, user, questions, answers, timeLeft, totalTime, subjectId, questionType, subjectName, navigate]);
 
   useEffect(() => {
     if (loading || questions.length === 0) return;
@@ -161,12 +198,9 @@ const Quiz = () => {
   const minutes = Math.floor(timeLeft / 60);
   const seconds = timeLeft % 60;
   const progress = ((currentIndex + 1) / questions.length) * 100;
-  const options = [
-    { key: "A", text: current.option_a },
-    { key: "B", text: current.option_b },
-    { key: "C", text: current.option_c },
-    { key: "D", text: current.option_d },
-  ];
+
+  const isSubjective = current.question_type === "subjective";
+  const isCoding = isSubjective && (current as SubjectiveQuestion).is_coding;
 
   return (
     <div className="min-h-screen bg-background bg-grid">
@@ -174,7 +208,10 @@ const Quiz = () => {
         <div className="max-w-3xl mx-auto px-4 py-3 flex items-center justify-between">
           <div>
             <p className="font-display font-semibold text-foreground">{subjectName}</p>
-            <p className="text-xs text-muted-foreground">Question {currentIndex + 1} of {questions.length}</p>
+            <p className="text-xs text-muted-foreground">
+              Question {currentIndex + 1} of {questions.length}
+              {isSubjective && <span className="ml-2 text-primary">• {isCoding ? "Coding" : "Written"}</span>}
+            </p>
           </div>
           <div className={cn(
             "flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium",
@@ -196,30 +233,62 @@ const Quiz = () => {
           </CardContent>
         </Card>
 
-        <div className="grid gap-3">
-          {options.map((opt) => (
-            <button
-              key={opt.key}
-              onClick={() => setAnswers((prev) => ({ ...prev, [current.id]: opt.key }))}
-              className={cn(
-                "w-full text-left p-4 rounded-xl border-2 transition-all",
-                answers[current.id] === opt.key
-                  ? "border-primary bg-accent glow-primary text-foreground shadow-sm"
-                  : "border-border/50 bg-card/60 hover:border-primary/30 text-foreground"
-              )}
-            >
-              <span className={cn(
-                "inline-flex items-center justify-center w-7 h-7 rounded-lg text-sm font-semibold mr-3",
-                answers[current.id] === opt.key
-                  ? "bg-gradient-primary text-primary-foreground"
-                  : "bg-secondary text-muted-foreground"
-              )}>
-                {opt.key}
-              </span>
-              {opt.text}
-            </button>
-          ))}
-        </div>
+        {/* Objective: MCQ options */}
+        {!isSubjective && (
+          <div className="grid gap-3">
+            {[
+              { key: "A", text: (current as ObjectiveQuestion).option_a },
+              { key: "B", text: (current as ObjectiveQuestion).option_b },
+              { key: "C", text: (current as ObjectiveQuestion).option_c },
+              { key: "D", text: (current as ObjectiveQuestion).option_d },
+            ].map((opt) => (
+              <button
+                key={opt.key}
+                onClick={() => setAnswers((prev) => ({ ...prev, [current.id]: opt.key }))}
+                className={cn(
+                  "w-full text-left p-4 rounded-xl border-2 transition-all",
+                  answers[current.id] === opt.key
+                    ? "border-primary bg-accent glow-primary text-foreground shadow-sm"
+                    : "border-border/50 bg-card/60 hover:border-primary/30 text-foreground"
+                )}
+              >
+                <span className={cn(
+                  "inline-flex items-center justify-center w-7 h-7 rounded-lg text-sm font-semibold mr-3",
+                  answers[current.id] === opt.key
+                    ? "bg-gradient-primary text-primary-foreground"
+                    : "bg-secondary text-muted-foreground"
+                )}>
+                  {opt.key}
+                </span>
+                {opt.text}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Subjective: Coding editor */}
+        {isSubjective && isCoding && (
+          <div className="space-y-2">
+            <p className="text-sm text-muted-foreground">Write your code below. You can run it to test before submitting.</p>
+            <CodeEditor
+              onCodeChange={(code) => setAnswers((prev) => ({ ...prev, [current.id]: code }))}
+              initialCode={answers[current.id] || ""}
+            />
+          </div>
+        )}
+
+        {/* Subjective: Written answer */}
+        {isSubjective && !isCoding && (
+          <div className="space-y-2">
+            <p className="text-sm text-muted-foreground">Write your answer below.</p>
+            <Textarea
+              placeholder="Type your answer here..."
+              value={answers[current.id] || ""}
+              onChange={(e) => setAnswers((prev) => ({ ...prev, [current.id]: e.target.value }))}
+              className="min-h-[200px] bg-background/50 border-border resize-none text-foreground placeholder:text-muted-foreground"
+            />
+          </div>
+        )}
 
         <div className="flex justify-between pt-4">
           <Button
