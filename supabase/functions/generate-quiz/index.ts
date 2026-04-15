@@ -19,7 +19,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { topic, numQuestions = 5, difficulty = "medium" } = await req.json();
+    const { topic, numQuestions = 5, difficulty = "medium", questionType = "objective" } = await req.json();
 
     if (!topic || typeof topic !== "string" || topic.trim().length === 0) {
       return new Response(JSON.stringify({ error: "Topic is required" }), {
@@ -28,7 +28,33 @@ Deno.serve(async (req) => {
       });
     }
 
-    const prompt = `Generate exactly ${numQuestions} multiple choice questions about: "${topic.trim()}"
+    let prompt: string;
+
+    if (questionType === "subjective") {
+      prompt = `Generate exactly ${numQuestions} subjective/written-answer questions about: "${topic.trim()}"
+
+Difficulty level: ${difficulty}
+
+Return a JSON array of objects with this exact structure:
+[
+  {
+    "question_text": "the question",
+    "question_type": "subjective",
+    "is_coding": false,
+    "model_answer": "a detailed model answer that would score full marks",
+    "max_marks": 10,
+    "grading_criteria": "key points to look for when grading"
+  }
+]
+
+Rules:
+- If the topic is about programming/coding (e.g. Python, JavaScript, C++, Java, algorithms, data structures), set is_coding to true and make the question ask the user to write code
+- For coding questions, the model_answer should be working code
+- For non-coding questions, provide thorough model answers
+- Vary difficulty based on the level specified
+- Return ONLY the JSON array, no other text`;
+    } else {
+      prompt = `Generate exactly ${numQuestions} multiple choice questions about: "${topic.trim()}"
 
 Difficulty level: ${difficulty}
 
@@ -50,6 +76,7 @@ Rules:
 - Questions should be factually accurate
 - Vary the correct answer position
 - Return ONLY the JSON array, no other text`;
+    }
 
     const response = await fetch(LOVABLE_API_URL, {
       method: "POST",
@@ -79,7 +106,6 @@ Rules:
     const data = await response.json();
     const content = data.choices?.[0]?.message?.content || "";
 
-    // Extract JSON from response (handle markdown code blocks)
     let jsonStr = content.trim();
     const jsonMatch = jsonStr.match(/```(?:json)?\s*([\s\S]*?)```/);
     if (jsonMatch) {
@@ -95,16 +121,29 @@ Rules:
       });
     }
 
-    // Validate structure
-    const validated = questions.map((q: Record<string, unknown>, i: number) => ({
-      id: `ai-${i}`,
-      question_text: String(q.question_text || ""),
-      option_a: String(q.option_a || ""),
-      option_b: String(q.option_b || ""),
-      option_c: String(q.option_c || ""),
-      option_d: String(q.option_d || ""),
-      correct_option: ["A", "B", "C", "D"].includes(String(q.correct_option)) ? String(q.correct_option) : "A",
-    }));
+    let validated;
+    if (questionType === "subjective") {
+      validated = questions.map((q: Record<string, unknown>, i: number) => ({
+        id: `ai-${i}`,
+        question_text: String(q.question_text || ""),
+        question_type: "subjective",
+        is_coding: Boolean(q.is_coding),
+        model_answer: String(q.model_answer || ""),
+        max_marks: Number(q.max_marks) || 10,
+        grading_criteria: String(q.grading_criteria || ""),
+      }));
+    } else {
+      validated = questions.map((q: Record<string, unknown>, i: number) => ({
+        id: `ai-${i}`,
+        question_text: String(q.question_text || ""),
+        question_type: "objective",
+        option_a: String(q.option_a || ""),
+        option_b: String(q.option_b || ""),
+        option_c: String(q.option_c || ""),
+        option_d: String(q.option_d || ""),
+        correct_option: ["A", "B", "C", "D"].includes(String(q.correct_option)) ? String(q.correct_option) : "A",
+      }));
+    }
 
     return new Response(JSON.stringify({ questions: validated }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
