@@ -68,8 +68,9 @@ const Quiz = () => {
   }, [subjectId, isAI, stateData, navigate]);
 
   const submitQuiz = useCallback(async () => {
-    if (submitting || !user) return;
+    if (submitting) return;
     setSubmitting(true);
+    const isGuest = !user;
 
     let score = 0;
     questions.forEach((q) => {
