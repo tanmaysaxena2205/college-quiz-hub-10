@@ -170,6 +170,42 @@ const Dashboard = () => {
               ))}
             </div>
           </div>
+
+          {/* Question Type */}
+          <div className="space-y-3">
+            <span className="font-display font-semibold text-foreground text-sm">Question Type</span>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setQuestionType("objective")}
+                className={cn(
+                  "flex items-center gap-2 px-6 py-2.5 rounded-full text-sm font-semibold transition-all",
+                  questionType === "objective"
+                    ? "bg-gradient-primary text-primary-foreground glow-primary"
+                    : "bg-secondary text-muted-foreground hover:text-foreground"
+                )}
+              >
+                <ListChecks className="w-4 h-4" />
+                Objective (MCQ)
+              </button>
+              <button
+                onClick={() => setQuestionType("subjective")}
+                className={cn(
+                  "flex items-center gap-2 px-6 py-2.5 rounded-full text-sm font-semibold transition-all",
+                  questionType === "subjective"
+                    ? "bg-gradient-primary text-primary-foreground glow-primary"
+                    : "bg-secondary text-muted-foreground hover:text-foreground"
+                )}
+              >
+                <FileText className="w-4 h-4" />
+                Subjective
+              </button>
+            </div>
+            {questionType === "subjective" && (
+              <p className="text-xs text-muted-foreground">
+                Coding topics will get code-writing questions with an integrated compiler. Non-coding topics get written-answer questions. All answers are AI-graded.
+              </p>
+            )}
+          </div>
         </div>
 
         {/* Generate Button */}
