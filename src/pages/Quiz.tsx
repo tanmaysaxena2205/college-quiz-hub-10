@@ -79,8 +79,8 @@ const Quiz = () => {
 
     const timeTaken = totalTime - timeLeft;
 
-    if (isAI) {
-      // For AI quizzes, navigate to results with state (no DB save for AI-generated)
+    if (isAI || isGuest) {
+      // For AI quizzes or guest users, navigate to results with state (no DB save)
       navigate("/results/ai", {
         state: {
           score,
@@ -95,7 +95,7 @@ const Quiz = () => {
       const { data: attempt, error } = await supabase
         .from("quiz_attempts")
         .insert({
-          user_id: user.id,
+          user_id: user!.id,
           subject_id: subjectId!,
           score,
           total_questions: questions.length,
